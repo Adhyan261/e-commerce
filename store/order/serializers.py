@@ -62,10 +62,11 @@ class OrderWriteSerializer(serializers.ModelSerializer):
 
     buyer = serializers.HiddenField(default=serializers.CurrentUserDefault())
     order_items = OrderItemSerializer(many=True)
+    total_cost = serializers.SerializerMethodField(read_only=True)
 
     class Meta:
         model = Order
-        fields = ('id', 'buyer',  'order_items',
+        fields = ('id', 'buyer',  'order_items', 'total_cost',
                   'created_at')
 
     def create(self, validated_data):
@@ -78,15 +79,15 @@ class OrderWriteSerializer(serializers.ModelSerializer):
         return order
 
     def update(self, instance, validated_data):
-        orders_data = validated_data.pop('order_items', None)
-        orders = list((instance.order_items).all())
+        order_items_data = validated_data.pop('order_items')
+        instance = super().update(instance, validated_data)
 
-        if orders_data:
-            for order_data in orders_data:
-                order = orders.pop(0)
-                order.product = order_data.get('product', order.product)
-                order.quantity = order_data.get('quantity', order.quantity)
-                order.save()
+        # Update nested OrderItems
+        for order_item_data in order_items_data:
+            order_item, _ = OrderItem.objects.get_or_create(order=instance, **order_item_data)
+            order_item.save()
 
         return instance
 
+    def get_total_cost(self, obj):
+        return obj.total_cost

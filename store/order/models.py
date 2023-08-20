@@ -12,7 +12,6 @@ User = get_user_model()
 
 class Order(models.Model):
     
-
     buyer = models.ForeignKey(
         User, related_name='orders', on_delete=models.CASCADE)
 
